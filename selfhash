@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+
+var usage_str =
+'Usage: selfhash [-m marker] [filename]\n'+
+'\n'+
+'selfhash is a program that takes a web page (HTML file) as input and\n'+
+'produces a self-hashing web page as its output.\n'+
+'\n'+
+'The output web page will be identical to the input page except that it\n'+
+'will include a script that will calculate the SHA-1 hash of the output\n'+
+'web page; that is, the output will calculate its own hash.\n'+
+'\n'+
+'The resulting hash is stored in a variable, __the_hash, for use by\n'+
+'other scripts in the input web page.\n'+
+'\n'+
+'The script is inserted just before the marker, which defaults to\n'+
+'<!--selfhash-->\n';
+
+function usage() {
+  process.stderr.write(usage_str);
+  process.exit(1);
+}
+
+var filename = "/dev/stdin";
+var marker = "<!--selfhash-->";
+
+switch (process.argv.length) {
+case 2: break;
+case 3: filename = process.argv[2]; break;
+case 4: if (process.argv[2] != "-m") usage(); marker = process.argv[3]; break;
+case 5: if (process.argv[2] == "-m") {
+          marker = process.argv[3];
+          filename = process.argv[4];
+        } else if (process.argv[3] == "-m") {
+          filename = process.argv[2];
+          marker = process.argv[4];
+        } else usage();
+        break;
+default: usage(); break;
+}
+
+var fs = require('fs');
+var util = require('util');
+var file = "";
+try {
+  file = fs.readFileSync(filename,'utf8');
+} catch (x) {
+  process.stderr.write('Could not read file '+filename+'\n');
+  process.exit(1);
+}
+var index = file.indexOf(marker);
+if (index < 0) {
+  process.stderr.write(util.format('Could not find marker \'%s\' in file %s\n',marker,filename));
+  process.exit(1);
+}
+var sha1_part = fs.readFileSync('sha1.js','utf8');
+var before_part = fs.readFileSync('before','utf8');
+var before_all = file.substring(0,index) + '<script>\n' + sha1_part + before_part;
+var chop_index = before_all.length;
+
+var after_part = util.format(fs.readFileSync('after','utf8'),chop_index,chop_index);
+var after_all = after_part+'</script>\n'+file.substring(index)
+
+process.stdout.write(before_all);
+process.stdout.write('"'+escape(before_all+after_all)+'";\n')
+process.stdout.write(after_all);
+

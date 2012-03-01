@@ -1,0 +1,5 @@
+var __u = unescape(__s);
+__p(__u.substring(0,%d));
+__p('"'+escape(__s)+'";\n');
+__p(__u.substring(%d));
+var __the_hash = Sha1.hash(__the_document);
